@@ -31,10 +31,15 @@ jobs:
           wget https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
           tar xvf zig-linux-x86_64-0.13.0.tar.xz
       
-      - name: Build Ghostty
+      - name: Build and Install Ghostty
         run: |
           cd ghostty
-          ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast
+          mkdir -p install
+          ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast install -p install
+          
+          # Debug output to see what files were installed
+          echo "Installed files:"
+          find install -type f
 
       - name: Get version
         id: get_version
@@ -42,27 +47,11 @@ jobs:
           
       - name: Create Debian package structure
         run: |
+          # Create basic structure
           mkdir -p debian-package/DEBIAN
-          mkdir -p debian-package/usr/local/bin
-          mkdir -p debian-package/usr/share/applications
-          mkdir -p debian-package/usr/share/icons/hicolor/16x16/apps
-          mkdir -p debian-package/usr/share/icons/hicolor/32x32/apps
-          mkdir -p debian-package/usr/share/icons/hicolor/128x128/apps
-          mkdir -p debian-package/usr/share/icons/hicolor/256x256/apps
-          mkdir -p debian-package/usr/share/icons/hicolor/512x512/apps
-          mkdir -p debian-package/usr/share/icons/hicolor/1024x1024/apps
           
-          # Copy binary
-          cp ghostty/zig-out/bin/ghostty debian-package/usr/local/bin/
-          chmod 755 debian-package/usr/local/bin/ghostty
-          
-          # Copy icons
-          cp ghostty/images/icons/icon_16.png debian-package/usr/share/icons/hicolor/16x16/apps/ghostty.png
-          cp ghostty/images/icons/icon_32.png debian-package/usr/share/icons/hicolor/32x32/apps/ghostty.png
-          cp ghostty/images/icons/icon_128.png debian-package/usr/share/icons/hicolor/128x128/apps/ghostty.png
-          cp ghostty/images/icons/icon_256.png debian-package/usr/share/icons/hicolor/256x256/apps/ghostty.png
-          cp ghostty/images/icons/icon_512.png debian-package/usr/share/icons/hicolor/512x512/apps/ghostty.png
-          cp ghostty/images/icons/icon_1024.png debian-package/usr/share/icons/hicolor/1024x1024/apps/ghostty.png
+          # Copy all installed files
+          cp -r ghostty/install/* debian-package/
           
           # Create control file
           cat > debian-package/DEBIAN/control << EOF
@@ -78,25 +67,12 @@ jobs:
            that uses platform-native UI and GPU acceleration.
           EOF
           
-          # Create desktop entry
-          cat > debian-package/usr/share/applications/ghostty.desktop << EOF
-          [Desktop Entry]
-          Name=Ghostty
-          Comment=Modern Terminal Emulator
-          Exec=/usr/local/bin/ghostty
-          Icon=ghostty
-          Terminal=false
-          Type=Application
-          Categories=System;TerminalEmulator;
-          StartupWMClass=ghostty
-          EOF
-          
       - name: Build DEB package
         run: |
           dpkg-deb --build debian-package
           mv debian-package.deb ghostty_${{ steps.get_version.outputs.version }}_amd64.deb
           
-      - name: Package binary
+      - name: Package portable binary
         run: |
           mkdir -p release
           cp ghostty/zig-out/bin/ghostty release/
