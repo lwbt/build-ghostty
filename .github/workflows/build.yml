@@ -20,7 +20,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev git
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev git dpkg-dev debhelper
         
       - name: Clone Ghostty
         run: |
@@ -35,6 +35,50 @@ jobs:
         run: |
           cd ghostty
           ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast
+
+      - name: Get version
+        id: get_version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          
+      - name: Create Debian package structure
+        run: |
+          mkdir -p debian-package/DEBIAN
+          mkdir -p debian-package/usr/local/bin
+          mkdir -p debian-package/usr/share/applications
+          
+          # Copy binary
+          cp ghostty/zig-out/bin/ghostty debian-package/usr/local/bin/
+          chmod 755 debian-package/usr/local/bin/ghostty
+          
+          # Create control file
+          cat > debian-package/DEBIAN/control << EOF
+          Package: ghostty
+          Version: ${{ steps.get_version.outputs.version }}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libgtk-4-1, libadwaita-1-0
+          Maintainer: Mohamed Elashri <mail@elashri.com>
+          Description: Modern Terminal Emulator
+           Ghostty is a fast, feature-rich terminal emulator
+           built with GTK4 and written in Zig.
+          EOF
+          
+          # Create desktop entry
+          cat > debian-package/usr/share/applications/ghostty.desktop << EOF
+          [Desktop Entry]
+          Name=Ghostty
+          Comment=Modern Terminal Emulator
+          Exec=/usr/local/bin/ghostty
+          Terminal=false
+          Type=Application
+          Categories=System;TerminalEmulator;
+          EOF
+          
+      - name: Build DEB package
+        run: |
+          dpkg-deb --build debian-package
+          mv debian-package.deb ghostty_${{ steps.get_version.outputs.version }}_amd64.deb
           
       - name: Package binary
         run: |
@@ -47,7 +91,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ghostty-linux-x86_64.tar.gz
+          files: |
+            ghostty-linux-x86_64.tar.gz
+            ghostty_${{ steps.get_version.outputs.version }}_amd64.deb
           draft: false
           prerelease: false
           generate_release_notes: true
