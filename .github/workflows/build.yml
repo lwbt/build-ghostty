@@ -1,0 +1,52 @@
+name: Build and Release Ghostty
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+  workflow_dispatch:  # Allow manual triggering
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev git
+        
+      - name: Clone Ghostty
+        run: |
+          git clone https://github.com/ghostty-org/ghostty.git
+      
+      - name: Download and extract Zig
+        run: |
+          wget https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
+          tar xvf zig-linux-x86_64-0.13.0.tar.xz
+      
+      - name: Build Ghostty
+        run: |
+          cd ghostty
+          ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast
+          
+      - name: Package binary
+        run: |
+          mkdir -p release
+          cp ghostty/zig-out/bin/ghostty release/
+          tar czf ghostty-linux-x86_64.tar.gz -C release .
+          
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ghostty-linux-x86_64.tar.gz
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
