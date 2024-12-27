@@ -45,10 +45,24 @@ jobs:
           mkdir -p debian-package/DEBIAN
           mkdir -p debian-package/usr/local/bin
           mkdir -p debian-package/usr/share/applications
+          mkdir -p debian-package/usr/share/icons/hicolor/16x16/apps
+          mkdir -p debian-package/usr/share/icons/hicolor/32x32/apps
+          mkdir -p debian-package/usr/share/icons/hicolor/128x128/apps
+          mkdir -p debian-package/usr/share/icons/hicolor/256x256/apps
+          mkdir -p debian-package/usr/share/icons/hicolor/512x512/apps
+          mkdir -p debian-package/usr/share/icons/hicolor/1024x1024/apps
           
           # Copy binary
           cp ghostty/zig-out/bin/ghostty debian-package/usr/local/bin/
           chmod 755 debian-package/usr/local/bin/ghostty
+          
+          # Copy icons
+          cp ghostty/images/icons/icon_16.png debian-package/usr/share/icons/hicolor/16x16/apps/ghostty.png
+          cp ghostty/images/icons/icon_32.png debian-package/usr/share/icons/hicolor/32x32/apps/ghostty.png
+          cp ghostty/images/icons/icon_128.png debian-package/usr/share/icons/hicolor/128x128/apps/ghostty.png
+          cp ghostty/images/icons/icon_256.png debian-package/usr/share/icons/hicolor/256x256/apps/ghostty.png
+          cp ghostty/images/icons/icon_512.png debian-package/usr/share/icons/hicolor/512x512/apps/ghostty.png
+          cp ghostty/images/icons/icon_1024.png debian-package/usr/share/icons/hicolor/1024x1024/apps/ghostty.png
           
           # Create control file
           cat > debian-package/DEBIAN/control << EOF
@@ -60,8 +74,8 @@ jobs:
           Depends: libgtk-4-1, libadwaita-1-0
           Maintainer: Mohamed Elashri <mail@elashri.com>
           Description: Modern Terminal Emulator
-           Ghostty is a fast, feature-rich terminal emulator
-           built with GTK4 and written in Zig.
+           Ghostty is a fast, feature-rich, and cross-platform terminal emulator
+           that uses platform-native UI and GPU acceleration.
           EOF
           
           # Create desktop entry

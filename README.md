@@ -1,12 +1,42 @@
 # Ghostty Build Automation
 
-This repository contains automation for building and releasing [Ghostty](https://github.com/ghostty-org/ghostty), a modern terminal emulator, on Debian/Ubuntu systems.
-
-## Usage
-You can download the last build from releases page. Or you can build Ghostty manually as described below.
+This repository contains automation for building and releasing [Ghostty](https://github.com/ghostty-org/ghostty), a fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration.
 
 
-### Manual Build
+## Installation
+
+### Method 1: Debian Package (Recommended for Debian/Ubuntu-based systems)
+Download the latest `ghostty_<version>_amd64.deb` from the releases page and install it:
+```bash
+sudo dpkg -i ghostty_<version>_amd64.deb
+sudo apt-get install -f  # Install any missing dependencies
+```
+
+After installation, you can:
+- Launch Ghostty from your applications menu
+- Run `ghostty` from the terminal
+
+### Method 2: Portable Binary
+If you prefer to run the portable version of Ghostty:
+
+1. Download the latest `ghostty-linux-x86_64.tar.gz` from the releases page
+2. Extract the archive:
+```bash
+tar xzf ghostty-linux-x86_64.tar.gz
+```
+3. Run the binary:
+```bash
+./ghostty
+```
+
+Note: You'll need the following dependencies installed:
+```bash
+sudo apt-get update
+sudo apt-get install -y libgtk-4-dev libadwaita-1-dev
+```
+
+## Building Manually
+
 If you want to build Ghostty locally:
 
 1. Install system dependencies:
@@ -33,21 +63,6 @@ cd ghostty
 ./zig-out/bin/ghostty
 ```
 
-### Automated Builds
-
-To trigger an automated build and release:
-
-1. Create and push a new tag:
-```bash
-git tag v1.0
-git push origin v1.0
-```
-
-This will automatically:
-- Build Ghostty with optimal settings
-- Create a new GitHub release
-- Upload the built binary
-
 ## License
 
-This automation is provided under the same license as Ghostty. Please refer to the [Ghostty repository](https://github.com/ghostty-org/ghostty) for license details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
