@@ -84,9 +84,11 @@ jobs:
           Name=Ghostty
           Comment=Modern Terminal Emulator
           Exec=/usr/local/bin/ghostty
+          Icon=ghostty
           Terminal=false
           Type=Application
           Categories=System;TerminalEmulator;
+          StartupWMClass=ghostty
           EOF
           
       - name: Build DEB package
