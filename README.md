@@ -2,6 +2,8 @@
 
 This repository contains automation for building and releasing [Ghostty](https://github.com/ghostty-org/ghostty), a fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration.
 
+# Latest Version : [v1.0.1](https://github.com/MohamedElashri/build-ghostty/releases/tag/v1.0.1)
+
 
 ## Installation
 
