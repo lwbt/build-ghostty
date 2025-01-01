@@ -26,20 +26,33 @@ jobs:
       - name: Get latest valid version tag
         id: get_tag
         run: |
-          UPSTREAM_TAGS=$(git ls-remote --tags https://github.com/ghostty-org/ghostty.git | \
-            grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | \
-            sed 's/.*refs\/tags\///')
+          # Get all tags and filter only v*.*.* tags, excluding 'tip'
+          UPSTREAM_TAGS=$(curl -s https://api.github.com/repos/ghostty-org/ghostty/tags | \
+            grep '"name":' | \
+            grep -o '"v[0-9][^"]*"' | \
+            tr -d '"')
           
           if [[ -n "${{ github.event.inputs.tag }}" ]]; then
-            if echo "$UPSTREAM_TAGS" | grep -q "^${{ github.event.inputs.tag }}$"; then
-              echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+            # For manual tag input, check if it exists
+            TAG="${{ github.event.inputs.tag }}"
+            if echo "$UPSTREAM_TAGS" | grep -q "^${TAG}$"; then
+              echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
             else
-              echo "Error: Tag ${{ github.event.inputs.tag }} not found in upstream repository"
+              echo "Error: Tag ${TAG} not found in upstream repository"
+              echo "Available tags:"
+              echo "$UPSTREAM_TAGS"
               exit 1
             fi
           else
-            echo "$UPSTREAM_TAGS" | sort -V | tail -n1 >> "$GITHUB_OUTPUT"
+            # Get latest version tag
+            LATEST_TAG=$(echo "$UPSTREAM_TAGS" | sort -V | tail -n1)
+            echo "tag=${LATEST_TAG}" >> "$GITHUB_OUTPUT"
           fi
+          
+          # Debug output
+          echo "Available tags:"
+          echo "$UPSTREAM_TAGS"
+          echo "Selected tag: $(cat $GITHUB_OUTPUT)"
 
       - name: Check if tag already built
         id: check_release
@@ -63,12 +76,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-4-dev libadwaita-1-dev git dpkg-dev debhelper
 
-      - name: Clone Ghostty
+      - name: Get tagged source code
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          git clone https://github.com/ghostty-org/ghostty.git
-          cd ghostty
-          git checkout ${{ steps.get_tag.outputs.tag }}
+          TAG=${{ steps.get_tag.outputs.tag }}
+          wget "https://github.com/ghostty-org/ghostty/archive/refs/tags/${TAG}.tar.gz"
+          tar xzf "${TAG}.tar.gz"
+          mv "ghostty-${TAG#v}" ghostty  # Remove 'v' prefix from directory name
 
       - name: Download and extract Zig
         if: steps.check_release.outputs.exists == 'false'
