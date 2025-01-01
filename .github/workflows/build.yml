@@ -6,9 +6,10 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
-      specific_tag:
-        description: 'Specific tag to build (leave empty for latest)'
+      tag:
+        description: 'Specific tag to build (e.g., v1.0.1, leave empty for latest)'
         required: false
+        default: ''
         type: string
 
 permissions:
@@ -33,7 +34,7 @@ jobs:
         run: |
           TAG=${{ steps.get_tag.outputs.tag }}
           if gh release view $TAG > /dev/null 2>&1; then
-            if [ -n "${{ github.event.inputs.specific_tag }}" ]; then
+            if [ -n "${{ github.event.inputs.tag }}" ]; then
               echo "exists=false" >> $GITHUB_OUTPUT
             else
               echo "exists=true" >> $GITHUB_OUTPUT
@@ -144,10 +145,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} | sed 's/.*refs\/tags\///')
           
-          if [ -n "${{ github.event.inputs.specific_tag }}" ]; then
+          if [ -n "${{ github.event.inputs.tag }}" ]; then
             # Check if manually specified tag exists upstream
-            if echo "$UPSTREAM_TAGS" | grep -q "^${{ github.event.inputs.specific_tag }}$"; then
-              echo "tag=${{ github.event.inputs.specific_tag }}" >> $GITHUB_OUTPUT
+            if echo "$UPSTREAM_TAGS" | grep -q "^${{ github.event.inputs.tag }}$"; then
+              echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
             else
               echo "Error: Tag ${{ github.event.inputs.specific_tag }} not found in upstream repository"
               exit 1
