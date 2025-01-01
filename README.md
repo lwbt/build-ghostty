@@ -1,3 +1,5 @@
+[![Build and Release Ghostty](https://github.com/MohamedElashri/build-ghostty/actions/workflows/build.yml/badge.svg?event=schedule)](https://github.com/MohamedElashri/build-ghostty/actions/workflows/build.yml)
+
 # Ghostty Build Automation
 
 This repository contains automation for building and releasing [Ghostty](https://github.com/ghostty-org/ghostty), a fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration.
