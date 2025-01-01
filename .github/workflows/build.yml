@@ -147,29 +147,41 @@ jobs:
           VERSION="${VERSION#v}"
           
           dpkg-deb --build debian-package
+          
+          echo "Checking .deb file:"
+          ls -l debian-package.deb
+          
+          echo "Moving .deb file to final location"
           mv debian-package.deb "ghostty_${VERSION}_amd64.deb"
           
-          echo "Checking .deb contents:"
+          echo "Checking final .deb file:"
+          ls -l "ghostty_${VERSION}_amd64.deb"
           dpkg -c "ghostty_${VERSION}_amd64.deb"
 
       - name: Package files for release
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          # Get version without 'v' prefix for .deb file
           VERSION="${{ steps.get_tag.outputs.tag }}"
           VERSION="${VERSION#v}"
           
-          # Create portable binary archive
+          echo "Creating portable binary archive"
           mkdir -p release
           cp ghostty/zig-out/bin/ghostty release/
           tar czf ghostty-linux-x86_64.tar.gz -C release .
           
-          # Move .deb to current directory for easier access
-          mv debian-package.deb "ghostty_${VERSION}_amd64.deb"
+          echo "Checking all generated files in current directory:"
+          ls -la
           
-          # List files that will be uploaded
-          echo "Files to be uploaded:"
-          ls -l ghostty-linux-x86_64.tar.gz "ghostty_${VERSION}_amd64.deb"
+          echo "Checking specific files:"
+          for file in "ghostty_${VERSION}_amd64.deb" ghostty-linux-x86_64.tar.gz; do
+            if [ -f "$file" ]; then
+              echo "✓ Found $file"
+              ls -l "$file"
+            else
+              echo "✗ Missing $file"
+              exit 1
+            fi
+          done
 
       - name: Set version
         if: steps.check_release.outputs.exists == 'false'
