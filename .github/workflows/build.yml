@@ -60,15 +60,23 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=${{ steps.get_tag.outputs.tag }}
+          echo "Checking if release exists for tag: $TAG"
+          
           if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release found for tag $TAG"
             if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+              echo "Manual build requested, will rebuild"
               echo "exists=false" >> "$GITHUB_OUTPUT"
             else
+              echo "Automated build, skipping"
               echo "exists=true" >> "$GITHUB_OUTPUT"
             fi
           else
+            echo "No release found for tag $TAG, will build"
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+          
+          echo "Final decision: $(cat $GITHUB_OUTPUT)"
 
       - name: Install system dependencies
         if: steps.check_release.outputs.exists == 'false'
@@ -144,23 +152,40 @@ jobs:
           echo "Checking .deb contents:"
           dpkg -c "ghostty_${VERSION}_amd64.deb"
 
-      - name: Package portable binary
+      - name: Package files for release
         if: steps.check_release.outputs.exists == 'false'
         run: |
+          # Get version without 'v' prefix for .deb file
+          VERSION="${{ steps.get_tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          
+          # Create portable binary archive
           mkdir -p release
           cp ghostty/zig-out/bin/ghostty release/
           tar czf ghostty-linux-x86_64.tar.gz -C release .
+          
+          # Move .deb to current directory for easier access
+          mv debian-package.deb "ghostty_${VERSION}_amd64.deb"
+          
+          # List files that will be uploaded
+          echo "Files to be uploaded:"
+          ls -l ghostty-linux-x86_64.tar.gz "ghostty_${VERSION}_amd64.deb"
 
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
         uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get_tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          echo "Preparing to upload files for version ${VERSION}"
+          ls -l "ghostty_${VERSION}_amd64.deb" ghostty-linux-x86_64.tar.gz
         with:
           tag_name: ${{ steps.get_tag.outputs.tag }}
           files: |
             ghostty-linux-x86_64.tar.gz
-            ghostty_${{ steps.get_tag.outputs.version }}_amd64.deb
+            ghostty_${{ steps.get_tag.outputs.tag }}_amd64.deb
           draft: false
           prerelease: false
           generate_release_notes: true
