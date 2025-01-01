@@ -3,7 +3,7 @@ name: Build and Release Ghostty
 on:
   schedule:
     # Check for new tags every 6 hours
-    - cron: '0 0/12 * * *'
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       specific_tag:
@@ -25,15 +25,136 @@ jobs:
       - name: Get latest valid version tag
         id: get_tag
         run: |
-          if [ -n "${{ github.event.inputs.specific_tag }}" ]; then
-            echo "tag=${{ github.event.inputs.specific_tag }}" >> $GITHUB_OUTPUT
+          # Fetch all tags from upstream
+          UPSTREAM_TAGS=$(git ls-remote --tags https://github.com/ghostty-org/ghostty.git | grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+
+
+      - name: Check if tag already built
+        id: check_release
+        run: |
+          TAG=${{ steps.get_tag.outputs.tag }}
+          if gh release view $TAG > /dev/null 2>&1; then
+            if [ -n "${{ github.event.inputs.specific_tag }}" ]; then
+              echo "exists=false" >> $GITHUB_OUTPUT
+            else
+              echo "exists=true" >> $GITHUB_OUTPUT
+            fi
           else
-            # Fetch tags from upstream
-            git ls-remote --tags https://github.com/ghostty-org/ghostty.git | \
-            grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | \
-            sort -V | \
-            tail -n1 | \
-            sed 's/.*refs\/tags\///' >> $GITHUB_OUTPUT
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install system dependencies
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libadwaita-1-dev git dpkg-dev debhelper
+
+      - name: Clone Ghostty
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          git clone https://github.com/ghostty-org/ghostty.git
+          cd ghostty
+          git checkout ${{ steps.get_tag.outputs.tag }}
+
+      - name: Download and extract Zig
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          wget https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz
+          tar xvf zig-linux-x86_64-0.13.0.tar.xz
+
+      - name: Build and Install Ghostty
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          cd ghostty
+          # First build without installing for portable binary
+          ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast
+          # Then build with install for proper package structure
+          ../zig-linux-x86_64-0.13.0/zig build -Doptimize=ReleaseFast install -p ../install-root
+          
+          echo "Checking installed files:"
+          find ../install-root -type f
+
+      - name: Create Debian package structure
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.get_tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          
+          # Create basic structure with proper usr prefix
+          mkdir -p debian-package/DEBIAN
+          mkdir -p debian-package/usr/bin
+          mkdir -p debian-package/usr/share
+          
+          # Copy files to the correct locations
+          cp -r install-root/bin/* debian-package/usr/bin/
+          cp -r install-root/share/* debian-package/usr/share/
+          
+          # Ensure proper permissions
+          chmod 755 debian-package/usr/bin/ghostty
+          chmod 644 debian-package/usr/share/applications/com.mitchellh.ghostty.desktop
+          
+          # Create control file
+          cat > debian-package/DEBIAN/control << EOF
+          Package: ghostty
+          Version: ${VERSION}
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Depends: libgtk-4-1, libadwaita-1-0
+          Maintainer: Mohamed Elashri <mail@elashri.com>
+          Description: Modern Terminal Emulator
+           Ghostty is a fast, feature-rich, and cross-platform terminal emulator
+           that uses platform-native UI and GPU acceleration.
+          EOF
+          
+          echo "Final package structure:"
+          find debian-package -type f
+
+      - name: Build DEB package
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.get_tag.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          
+          dpkg-deb --build debian-package
+          mv debian-package.deb ghostty_${VERSION}_amd64.deb
+          
+          echo "Checking .deb contents:"
+          dpkg -c ghostty_${VERSION}_amd64.deb
+
+      - name: Package portable binary
+        if: steps.check_release.outputs.exists == 'false'
+        run: |
+          mkdir -p release
+          cp ghostty/zig-out/bin/ghostty release/
+          tar czf ghostty-linux-x86_64.tar.gz -C release .
+
+      - name: Create Release
+        if: steps.check_release.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          files: |
+            ghostty-linux-x86_64.tar.gz
+            ghostty_${{ steps.get_tag.outputs.tag }}_amd64.deb
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} | sed 's/.*refs\/tags\///')
+          
+          if [ -n "${{ github.event.inputs.specific_tag }}" ]; then
+            # Check if manually specified tag exists upstream
+            if echo "$UPSTREAM_TAGS" | grep -q "^${{ github.event.inputs.specific_tag }}$"; then
+              echo "tag=${{ github.event.inputs.specific_tag }}" >> $GITHUB_OUTPUT
+            else
+              echo "Error: Tag ${{ github.event.inputs.specific_tag }} not found in upstream repository"
+              exit 1
+            fi
+          else
+            # Get latest tag
+            echo "$UPSTREAM_TAGS" | sort -V | tail -n1 >> $GITHUB_OUTPUT
           fi
 
       - name: Check if tag already built
