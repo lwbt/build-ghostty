@@ -171,13 +171,18 @@ jobs:
           echo "Files to be uploaded:"
           ls -l ghostty-linux-x86_64.tar.gz "ghostty_${VERSION}_amd64.deb"
 
+      - name: Set version
+        if: steps.check_release.outputs.exists == 'false'
+        id: version
+        run: |
+          TAG=${{ steps.get_tag.outputs.tag }}
+          echo "version=${TAG#v}" >> $GITHUB_OUTPUT
+          
       - name: Check release files
         if: steps.check_release.outputs.exists == 'false'
         run: |
-          VERSION="${{ steps.get_tag.outputs.tag }}"
-          VERSION="${VERSION#v}"
-          echo "Preparing to upload files for version ${VERSION}"
-          ls -l "ghostty_${VERSION}_amd64.deb" ghostty-linux-x86_64.tar.gz
+          echo "Preparing to upload files for version ${{ steps.version.outputs.version }}"
+          ls -l "ghostty_${{ steps.version.outputs.version }}_amd64.deb" ghostty-linux-x86_64.tar.gz
 
       - name: Create Release
         if: steps.check_release.outputs.exists == 'false'
@@ -188,7 +193,7 @@ jobs:
           tag_name: ${{ steps.get_tag.outputs.tag }}
           files: |
             ghostty-linux-x86_64.tar.gz
-            ghostty_${{ steps.get_tag.outputs.tag#v }}_amd64.deb
+            ghostty_${{ steps.version.outputs.version }}_amd64.deb
           draft: false
           prerelease: false
           generate_release_notes: true
