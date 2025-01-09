@@ -201,13 +201,22 @@ jobs:
           echo "Checking generated files:"
           ls -la ghostty-linux-x86_64-ubuntu${UBUNTU_VERSION}.tar.gz
 
+      - name: List files before upload
+        run: |
+          echo "Current directory contents:"
+          ls -R
+          echo "Looking for DEB file:"
+          find . -name "ghostty_*.deb"
+          echo "Looking for TAR file:"
+          find . -name "ghostty-linux-x86_64-*.tar.gz"
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ghostty-${{ matrix.ubuntu }}
           path: |
-            ghostty_${{ needs.check-tag.outputs.version }}_ubuntu${{ matrix.ubuntu }}*_amd64.deb
-            ghostty-linux-x86_64-ubuntu${{ matrix.ubuntu }}*.tar.gz
+            ghostty_*.deb
+            ghostty-linux-x86_64-*.tar.gz
 
   create-release:
     needs: [check-tag, build-and-package]
@@ -217,11 +226,25 @@ jobs:
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
-        
-      - name: List downloaded artifacts
+        with:
+          path: artifacts
+          
+      - name: Debug artifact structure
         run: |
-          echo "Downloaded artifacts:"
-          find . -type f
+          echo "Full directory structure:"
+          ls -R artifacts/
+          echo "Looking for DEB files:"
+          find artifacts/ -name "*.deb"
+          echo "Looking for TAR.GZ files:"
+          find artifacts/ -name "*.tar.gz"
+          
+      - name: Prepare files for release
+        run: |
+          mkdir -p release
+          find artifacts/ -name "*.deb" -exec cp {} release/ \;
+          find artifacts/ -name "*.tar.gz" -exec cp {} release/ \;
+          echo "Files ready for release:"
+          ls -la release/
         
       - name: Create Release
         uses: softprops/action-gh-release@v1
@@ -229,9 +252,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ needs.check-tag.outputs.tag }}
-          files: |
-            ghostty-ubuntu-*/ghostty_*_ubuntu*_amd64.deb
-            ghostty-ubuntu-*/ghostty-linux-x86_64-ubuntu*.tar.gz
+          files: release/*
           draft: false
           prerelease: false
           generate_release_notes: true
