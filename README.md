@@ -1,18 +1,24 @@
 [![Build and Release Ghostty](https://github.com/MohamedElashri/build-ghostty/actions/workflows/build.yml/badge.svg?event=schedule)](https://github.com/MohamedElashri/build-ghostty/actions/workflows/build.yml)
 
 # Ghostty Build Automation
-
 This repository contains automation for building and releasing [Ghostty](https://github.com/ghostty-org/ghostty), a fast, feature-rich, and cross-platform terminal emulator that uses platform-native UI and GPU acceleration.
 
 # Latest Version : [v1.0.1](https://github.com/MohamedElashri/build-ghostty/releases/tag/v1.0.1)
 
-
 ## Installation
 
 ### Method 1: Debian Package (Recommended for Debian/Ubuntu-based systems)
-Download the latest `ghostty_<version>_amd64.deb` from the releases page and install it:
+Download the appropriate .deb package for your Ubuntu version from the releases page:
+
+- For Ubuntu 22.04:
 ```bash
-sudo dpkg -i ghostty_<version>_amd64.deb
+sudo dpkg -i ghostty_<version>_ubuntu22.04_amd64.deb
+sudo apt-get install -f  # Install any missing dependencies
+```
+
+- For Ubuntu 24.04:
+```bash
+sudo dpkg -i ghostty_<version>_ubuntu24.04_amd64.deb
 sudo apt-get install -f  # Install any missing dependencies
 ```
 
@@ -23,11 +29,15 @@ After installation, you can:
 ### Method 2: Portable Binary
 If you prefer to run the portable version of Ghostty:
 
-1. Download the latest `ghostty-linux-x86_64.tar.gz` from the releases page
+1. Download the appropriate version for your Ubuntu release from the releases page:
+   - `ghostty-linux-x86_64-ubuntu22.04.tar.gz` for Ubuntu 22.04
+   - `ghostty-linux-x86_64-ubuntu24.04.tar.gz` for Ubuntu 24.04
+
 2. Extract the archive:
 ```bash
-tar xzf ghostty-linux-x86_64.tar.gz
+tar xzf ghostty-linux-x86_64-ubuntu*.tar.gz
 ```
+
 3. Run the binary:
 ```bash
 ./ghostty
@@ -39,8 +49,11 @@ sudo apt-get update
 sudo apt-get install -y libgtk-4-dev libadwaita-1-dev
 ```
 
-## Building Manually
+### Version Compatibility
+- Ubuntu 22.04 package: Compatible with Ubuntu 22.04 and similar distributions with equivalent GLIBC versions
+- Ubuntu 24.04 package: Compatible with Ubuntu 24.04 and similar distributions with equivalent GLIBC versions
 
+## Building Manually
 If you want to build Ghostty locally:
 
 1. Install system dependencies:
@@ -67,6 +80,12 @@ cd ghostty
 ./zig-out/bin/ghostty
 ```
 
-## License
+## Automated Builds
+This repository automatically:
+- Checks for new Ghostty releases every 6 hours
+- Builds packages for `Ubuntu 22.04` and `Ubuntu 24.04`
+- Creates GitHub releases with version-specific packages
+- Generates both .deb packages and portable binaries
 
+## License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
