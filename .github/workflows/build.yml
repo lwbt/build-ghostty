@@ -21,7 +21,7 @@ jobs:
     outputs:
       tag: ${{ steps.get_tag.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
-      should_build: ${{ steps.check_release.outputs.exists == 'false' }}
+      should_build: ${{ steps.check_release.outputs.should_build }}
     
     steps:
       - name: Get latest valid version tag
@@ -62,26 +62,33 @@ jobs:
           echo "version=${TAG#v}" >> $GITHUB_OUTPUT
           echo "Version set to: $(cat $GITHUB_OUTPUT)"
 
-      - name: Check if tag already built
+      - name: Check if build needed
         id: check_release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=${{ steps.get_tag.outputs.tag }}
-          echo "Checking if release exists for tag: $TAG"
+          echo "Checking if build needed for tag: $TAG"
           
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            echo "Release found for tag $TAG"
-            if [[ -n "${{ github.event.inputs.tag }}" ]]; then
-              echo "Manual build requested, will rebuild"
-              echo "exists=false" >> "$GITHUB_OUTPUT"
-            else
-              echo "Automated build, skipping"
-              echo "exists=true" >> "$GITHUB_OUTPUT"
-            fi
-          else
+          # Get all releases from this repository
+          RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/releases")
+          
+          # Check if we have a release for this tag
+          TAG_RELEASE=$(echo "$RELEASES" | jq -r ".[] | select(.tag_name==\"$TAG\")")
+          
+          # Debug output
+          echo "Checking for existing release with tag: $TAG"
+          
+          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+            echo "Manual build requested, will build regardless"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          elif [[ -z "$TAG_RELEASE" ]]; then
             echo "No release found for tag $TAG, will build"
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Release already exists for tag $TAG, skipping build"
+            echo "should_build=false" >> "$GITHUB_OUTPUT"
           fi
           
           echo "Final decision: $(cat $GITHUB_OUTPUT)"
