@@ -1,0 +1,11 @@
+# AsciiDoc
+adoc
+toclevels
+
+## pre-commit
+#autofix
+#shellcheck
+#shfmt
+#yamlfmt
+
+# Names
