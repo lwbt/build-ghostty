@@ -235,6 +235,20 @@ jobs:
             ghostty_*.deb
             ghostty-linux-x86_64-*.tar.gz
 
+      - name: "Build AppImage"
+        if: matrix.ubuntu == 'ubuntu-24.04'
+        shell: bash
+        run: "bash ci/appimage.sh"
+
+      - name: Upload artifacts AppImage
+        if: matrix.ubuntu == 'ubuntu-24.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostty-${{ matrix.ubuntu }}
+          path: |
+            Ghostty-*.AppImage
+            Ghostty-*.AppImage.zsync
+
   create-release:
     needs: [check-tag, build-and-package]
     if: needs.check-tag.outputs.should_build == 'true'

@@ -21,6 +21,10 @@ repos:
       - id: check-json
       - id: check-merge-conflict
       - id: check-shebang-scripts-are-executable
+        exclude: |
+          (?x)^(
+              ci/appstreamcli
+          )$
       - id: check-symlinks
       - id: check-toml
       - id: check-xml
@@ -51,7 +55,7 @@ repos:
         types: ["executable", "file", "shell", "text"]
         exclude: |
           (?x)^(
-              path/to/file\.py
+              ci/appimage.sh
           )$
   - repo: https://github.com/rhysd/actionlint
     rev: v1.7.4
